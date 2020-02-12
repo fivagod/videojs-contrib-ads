@@ -17,7 +17,7 @@ class Postroll extends AdState {
    * For state transitions to work correctly, initialization should
    * happen here, not in a constructor.
    */
-  init(player) {
+  init(player, adsReady) {
     this.waitingForAdBreak = true;
 
     // Legacy name that now simply means "handling postrolls".
@@ -37,7 +37,13 @@ class Postroll extends AdState {
       this._postrollTimeout = player.setTimeout(function() {
         player.trigger('adtimeout');
       }, timeout);
-
+      // If adsready already happened, lets get started. Otherwise,
+      // wait until onAdsReady.
+      if (adsReady) {
+        this.handleAdsReady();
+      } else {
+        this.adsReady = false;
+      }
     // No postroll, ads are done
     } else {
       this.resumeContent(player);
@@ -48,6 +54,25 @@ class Postroll extends AdState {
     }
   }
 
+  /*
+   * Adsready event after play event.
+   */
+  onAdsReady(player) {
+    if (!player.ads.inAdBreak()) {
+      player.ads.debug('Received adsready event (Postroll)');
+      this.handleAdsReady();
+    } else {
+      videojs.log.warn('Unexpected adsready event (Postroll)');
+    }
+  }
+
+  /*
+   * Ad plugin is ready. Let's get started on this preroll.
+   */
+  handleAdsReady() {
+    this.adsReady = true;
+    this.player.trigger('readyforpreroll');
+  }
   /*
    * Start the postroll if it's not too late.
    */
